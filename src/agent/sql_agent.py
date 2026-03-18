@@ -8,7 +8,7 @@ import os
 class InsightSQLAgent:
     def __init__(self, model_name: str = None):
         if model_name is None:
-            model_name = os.getenv("MODEL_NAME", "gemini-1.5-pro")
+            model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
         self.db = get_db_connection()
         self.metadata_mgr = MetadataManager()
         self.llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)

@@ -5,7 +5,7 @@ InsightStream is a "Text-to-SQL" system that translates natural language questio
 
 ## 🛠 Tech Stack
 * **Orchestration:** LangChain (SQL Agent) or LlamaIndex.
-* **LLM:** GPT-4o (High reasoning for SQL generation).
+* **LLM:** Gemini 2.5 Flash (High reasoning for SQL generation).
 * **Database:** PostgreSQL (with a sample dataset like Northwind or a custom SaaS schema).
 * **Metadata Management:** Schema-level descriptions stored in a YAML file or Vector DB.
 * **Frontend:** Streamlit or Vercel v0 (for instant data visualization).
