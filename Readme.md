@@ -48,17 +48,3 @@ InsightStream is a "Text-to-SQL" system that translates natural language questio
 
 ### Phase 4: Visualization & Explainability
 * **Task:** Before showing data, the agent must output: *"I am calculating this by joining the 'Orders' and 'Customers' tables, filtering for the 'Europe' region, and summing the 'Total' column."*
-
----
-
-## 🛡 Security Guardrails (Crucial for Portfolio)
-To prove you are production-ready, implement:
-1.  **Read-Only User:** The AI must connect via a database user that only has `SELECT` permissions.
-2.  **Query Limits:** Force a `LIMIT 100` on every generated query to prevent the LLM from crashing the browser with 1 million rows.
-3.  **SQL Injection Check:** Use a library like `sqlparse` to block any query containing `DROP`, `DELETE`, or `UPDATE`.
-
----
-
-## 🌟 How to Show This Off
-* **Interactive Demo:** Allow recruiters to type a query like "Who are my top 5 customers by revenue in 2025?" and show the SQL and Chart generating in real-time.
-* **Schema Map:** Show a visual of how your "Schema Pruning" works—demonstrating that you can handle databases with 100+ tables without blowing the token limit.
