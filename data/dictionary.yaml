@@ -1,0 +1,24 @@
+tables:
+  customers:
+    description: "Contains information about registered users and companies."
+    columns:
+      id: "Unique identifier for the customer."
+      name: "Full name of the customer or company."
+      attr_1: "Subscription status (e.g., 'active', 'pended', 'cancelled')."
+      created_at: "The date when the customer account was created."
+      region: "Geographic location of the customer (e.g., 'North America', 'Europe')."
+  orders:
+    description: "Contains transaction details for customer purchases."
+    columns:
+      id: "Unique order ID."
+      customer_id: "Reference to the customer who placed the order."
+      amount: "Total value of the transaction in USD."
+      status: "Order fulfillment status (e.g., 'shipped', 'processing')."
+      order_date: "The date the order was placed."
+  products:
+    description: "Catalog of items available for purchase."
+    columns:
+      id: "Product identifier."
+      name: "Name of the product."
+      price: "Unit price of the product."
+      category: "Category the product belongs to."
