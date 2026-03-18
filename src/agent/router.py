@@ -13,7 +13,7 @@ class RouteQuery(BaseModel):
 class SemanticRouter:
     def __init__(self, model_name: str = None):
         if model_name is None:
-            model_name = os.getenv("MODEL_NAME", "gemini-1.5-pro")
+            model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
         self.llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
         self.structured_llm_router = self.llm.with_structured_output(RouteQuery)
         

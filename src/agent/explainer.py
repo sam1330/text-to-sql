@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 class ExplainerAgent:
     def __init__(self, model_name: str = None):
         if model_name is None:
-            model_name = os.getenv("MODEL_NAME", "gemini-1.5-pro")
+            model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
         self.llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
         
         system = """You are an explainability agent for a Data Analytics system. 
