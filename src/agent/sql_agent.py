@@ -18,7 +18,9 @@ class InsightSQLAgent:
             llm=self.llm,
             toolkit=self.toolkit,
             verbose=True,
-            agent_type="openai-functions",
+            agent_type="tool-calling",
+            handle_parsing_errors=True,
+            agent_executor_kwargs = {"return_intermediate_steps": True}
         )
 
     def _get_few_shot_prompt(self):
@@ -45,12 +47,37 @@ class InsightSQLAgent:
             try:
                 if last_error:
                     retry_prompt = f"The previous attempt failed with this error: {last_error}. Please correct the SQL and try again.\n\n{prompt}"
-                    return self.agent_executor.invoke({"input": retry_prompt})
+                    response = self.agent_executor.invoke({"input": retry_prompt})
                 else:
-                    return self.agent_executor.invoke({"input": prompt})
+                    response = self.agent_executor.invoke({"input": prompt})
+
+                
+                print(f"DEBUG: Extracted Response: {response}")
+                
+                # Extract SQL from intermediate steps
+                sql = ""
+                if "intermediate_steps" in response:
+                    for action, observation in response["intermediate_steps"]:
+                        if hasattr(action, "tool") and "sql_db_query" in action.tool:
+                            # Handle both string and dict tool_input (common in different agent types)
+                            if isinstance(action.tool_input, dict):
+                                sql = action.tool_input.get("query", "")
+                            else:
+                                sql = action.tool_input
+                
+                print(f"DEBUG: Extracted SQL: {sql}")
+                
+                return {
+                    "output": response.get("output", "No response."),
+                    "sql": sql
+                }
+
             except Exception as e:
                 last_error = str(e)
                 print(f"Error on attempt {attempt + 1}: {last_error}")
                 attempt += 1
         
-        return {"output": f"Failed after {max_retries} attempts. Last error: {last_error}"}
+        return {
+            "output": f"Failed after {max_retries} attempts. Last error: {last_error}",
+            "sql": ""
+        }

@@ -12,7 +12,8 @@ tables:
     columns:
       id: "Unique order ID."
       customer_id: "Reference to the customer who placed the order."
-      amount: "Total value of the transaction in USD."
+      product_id: "Reference to the product that was ordered."
+      amount: "Total products quantity ordered"
       status: "Order fulfillment status (e.g., 'shipped', 'processing')."
       order_date: "The date the order was placed."
   products:

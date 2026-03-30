@@ -26,10 +26,12 @@ def seed_database():
             CREATE TABLE IF NOT EXISTS orders (
                 id SERIAL PRIMARY KEY,
                 customer_id INTEGER,
+                product_id INTEGER,
                 amount REAL,
                 status TEXT,
                 order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(customer_id) REFERENCES customers(id)
+                FOREIGN KEY(customer_id) REFERENCES customers(id),
+                FOREIGN KEY(product_id) REFERENCES products(id)
             )
         """))
         
@@ -43,9 +45,9 @@ def seed_database():
             conn.execute(text("INSERT INTO products (name, price, category) VALUES ('Laptop', 1200.0, 'Electronics')"))
             conn.execute(text("INSERT INTO products (name, price, category) VALUES ('Mouse', 25.0, 'Electronics')"))
             
-            conn.execute(text("INSERT INTO orders (customer_id, amount, status) VALUES (1, 1225.0, 'shipped')"))
-            conn.execute(text("INSERT INTO orders (customer_id, amount, status) VALUES (2, 25.0, 'processing')"))
-            conn.execute(text("INSERT INTO orders (customer_id, amount, status) VALUES (3, 0.0, 'cancelled')"))
+            conn.execute(text("INSERT INTO orders (customer_id, product_id, amount, status) VALUES (1, 1, 1225.0, 'shipped')"))
+            conn.execute(text("INSERT INTO orders (customer_id, product_id, amount, status) VALUES (2, 2, 25.0, 'processing')"))
+            conn.execute(text("INSERT INTO orders (customer_id, product_id, amount, status) VALUES (3, 1, 0.0, 'cancelled')"))
             
             conn.commit()
             print("Database seeded successfully.")
