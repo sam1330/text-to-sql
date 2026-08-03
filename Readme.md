@@ -1,50 +1,85 @@
-# Project: InsightStream – Agentic Natural Language Analytics Pipeline
+# InsightStream – Agentic Natural Language Analytics Pipeline
 
 ## 🎯 Overview
-InsightStream is a "Text-to-SQL" system that translates natural language questions into complex SQL queries, executes them safely, and returns both a visual chart and a natural language summary. It includes a **Self-Correction Loop** (to fix syntax errors) and an **Explainability Layer** (to show the user the logic before running the query).
+InsightStream is a "Text-to-SQL" system that translates natural language questions into SQL, executes them safely, and returns both a chart and a natural-language answer. It routes each question to either a SQL agent or a general LLM, explains the SQL logic in plain English before showing results, and retries failed queries by feeding the database error back to the LLM.
 
 ## 🛠 Tech Stack
-* **Orchestration:** LangChain (SQL Agent) or LlamaIndex.
-* **LLM:** Gemini 2.5 Flash (High reasoning for SQL generation).
-* **Database:** PostgreSQL (with a sample dataset like Northwind or a custom SaaS schema).
-* **Metadata Management:** Schema-level descriptions stored in a YAML file or Vector DB.
-* **Frontend:** Streamlit or Vercel v0 (for instant data visualization).
-* **Safety:** SQLGlot (for query transpilation and sanitization).
+* **Orchestration:** LangChain (`create_sql_agent` with tool-calling)
+* **LLM:** Google Gemini (`gemini-2.5-flash` by default, via `langchain-google-genai`)
+* **Database:** PostgreSQL (falls back to local SQLite if `DATABASE_URL` is unset)
+* **Metadata:** Table/column descriptions in [data/dictionary.yaml](data/dictionary.yaml)
+* **Frontend:** Streamlit ([app.py](app.py))
+* **Visualization:** Plotly Express, chart type/code chosen by an LLM agent
+* **Safety:** `sqlparse`-based keyword blocklist + auto `LIMIT` injection ([src/security/sanitizer.py](src/security/sanitizer.py))
 
----
+## 🏗 Architecture
 
-## 🏗 System Architecture
+```
+User question
+    │
+    ▼
+SemanticRouter ──▶ general_llm (plain chat answer)
+    │
+    ▼ sql_agent
+InsightSQLAgent (LangChain SQL agent + dictionary.yaml context + few-shot examples)
+    │  self-correction loop: re-prompts with the DB error on failure, up to 3 attempts
+    ▼
+ExplainerAgent ──▶ plain-English explanation of the generated SQL
+    │
+    ▼
+DataFrame fetched via SQLAlchemy
+    │
+    ▼
+ChartAgent ──▶ picks chart type (bar/line/pie/table/none) + generates Plotly code
+    │
+    ▼
+Streamlit UI: explanation, data table, chart
+```
 
+### Components
+| Module | Responsibility |
+|---|---|
+| [src/agent/router.py](src/agent/router.py) | Routes a question to `sql_agent` or `general_llm` using structured output |
+| [src/agent/sql_agent.py](src/agent/sql_agent.py) | Runs the LangChain SQL agent with dictionary context + few-shot prompt, retries on error |
+| [src/agent/explainer.py](src/agent/explainer.py) | Turns the generated SQL into a natural-language explanation |
+| [src/viz/chart_agent.py](src/viz/chart_agent.py) | Chooses a chart type and generates one line of Plotly Express code |
+| [src/database/connection.py](src/database/connection.py) | Builds the SQLAlchemy/`SQLDatabase` connection (Postgres or SQLite fallback) |
+| [src/database/metadata.py](src/database/metadata.py) | Loads `data/dictionary.yaml` and formats it as LLM context |
+| [src/database/pruner.py](src/database/pruner.py) | Chroma-backed vector search to retrieve only relevant tables for a question |
+| [src/database/seed.py](src/database/seed.py) | Creates and seeds `customers`, `products`, `orders` sample tables |
+| [src/security/sanitizer.py](src/security/sanitizer.py) | Blocks destructive SQL keywords and enforces a `LIMIT` |
 
+> Note: `SchemaPruner` (vector-based schema retrieval) exists but isn't wired into the app flow yet — `InsightSQLAgent` currently sends the full dictionary context on every request.
 
-### The Workflow Logic:
-1.  **Semantic Router:** The agent determines if the query is a "Data Query" (SQL) or a "General Question" (General LLM).
-2.  **Schema Pruning:** Instead of sending the *entire* database schema to the LLM (which is expensive and confusing), the system uses a Vector DB to retrieve only the relevant table definitions.
-3.  **SQL Generation:** The LLM generates the SQL based on the pruned schema and specific business rules (e.g., "Active users are defined as those who logged in within 30 days").
-4.  **The "Check-Engine" Loop:** * The SQL is run against a "Dry Run" validator.
-    * If the database returns an error, the error message is fed back to the LLM to rewrite the query.
-5.  **Data-to-Viz:** The resulting JSON/Dataframe is sent to a specialized "Chart Agent" that decides if a Bar, Line, or Pie chart is most appropriate.
-6.  **Privacy Masking:** PII (Personally Identifiable Information) is automatically scrubbed from the final output.
+## 🚀 Getting Started
 
----
+### 1. Configure environment
+```bash
+cp .env.example .env
+# then fill in GOOGLE_API_KEY, MODEL_NAME, DATABASE_URL
+```
 
-## 🚀 Step-by-Step Implementation
+### 2. Run with Docker (Postgres + app)
+```bash
+docker-compose up --build
+```
+The app will be available at `http://localhost:8501`. On first run, seed the sample data:
+```bash
+python -m src.database.seed
+```
 
-### Phase 1: Knowledge Augmentation (The Context)
-* **Task:** Create a `dictionary.yaml` that defines what column names actually mean.
-* **Example:** `attr_1` might mean `subscription_status`. The LLM needs this mapping to be accurate.
+### 3. Run locally
+```bash
+pip install -r requirements.txt
+python -m src.database.seed   # optional: seeds sample customers/products/orders
+streamlit run app.py
+```
+Without a `DATABASE_URL`, the app falls back to a local `insight_stream.db` SQLite file.
 
-### Phase 2: The SQL Agent (LangChain)
-* **Task:** Initialize the `SQLDatabaseChain`.
-* **Feature:** Implement "Few-Shot Prompting." Give the LLM 5 examples of complex joins relevant to your specific data so it learns your "style."
+## 📁 Sample Schema
+Seeded via [src/database/seed.py](src/database/seed.py):
+* **customers** — `id, name, attr_1 (subscription status), region, created_at`
+* **products** — `id, name, price, category`
+* **orders** — `id, customer_id, product_id, amount, status, order_date`
 
-### Phase 3: The Self-Healing Loop
-* **Task:** Wrap the execution in a `try-except` block.
-* **Logic:**
-    ```python
-    if "column does not exist" in db_error:
-        prompt_llm("The previous query failed with this error: {db_error}. Please check the schema and try again.")
-    ```
-
-### Phase 4: Visualization & Explainability
-* **Task:** Before showing data, the agent must output: *"I am calculating this by joining the 'Orders' and 'Customers' tables, filtering for the 'Europe' region, and summing the 'Total' column."*
+Column meanings for the LLM are documented in [data/dictionary.yaml](data/dictionary.yaml).
